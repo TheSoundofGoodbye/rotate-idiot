@@ -1,41 +1,19 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Image from "next/image";
 
-
-//Generate a 3D matrix of size x size x size and put each side of the cube in the matrix
-function calculateCube(size: number): any {
-  //Canvas is twice the size of the square of cubes and has 6 layers
-  let canvas = Array(size*2).fill(null).map(() => 
-    Array(size*2).fill(null).map(() => 
-     Array(6).fill(null).map(() => 0)
-    )
-  );
-
-
+//initialzie the cube
+function initializeCube(size: number): any {
   // face 1 is the front face and face1 has size * size elements with coordination (0,0,0) to (0,size-1,size-1)
-  let face1 = Array(size*size).fill(null).map(() =>  
-    Array(size).fill(null).map(() => [0,0,0])
-  );
+  let face1 = Array(size*size).fill(null).map(() => [0,0,0]);
    
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
-      face1[i][j] = [0, i, j];
+      face1[i * 10 + j] = [0, i, j];
     }
   }
-
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-
-      let xcoor = Math.round(face1[i][j][0]);
-      let ycoor = Math.round(face1[i][j][1]);
-      let zcoor = Math.round(face1[i][j][2]);
-
-      //put coordination in the canvas
-      if (canvas[xcoor][ycoor][0] === null) {
-        canvas[xcoor][ycoor][0] = zcoor;
-      }
-    }
-  }
-
+  
   // // face 2 is the back face and face2 has size * size elements with coordination (size-1,0,0) to (size-1,size-1,size-1)
   // let face2 = Array(size*size).fill(null).map(() =>  
   //   Array(size).fill(null).map(() => [0,0,0])
@@ -86,17 +64,126 @@ function calculateCube(size: number): any {
   //   }
   // }
 
-  return canvas
+  const initialCube = [face1];
+  
+  return initialCube;
 }
 
-//
+function rotateFace(face: any, axis: string, degree: number): any {
+  let newFace = face;
+  let radian = degree * Math.PI / 180;
+  let cos = Math.cos(radian);
+  let sin = Math.sin(radian);
+
+  for (let i = 0; i < face.length; i++) {
+    let x = face[i][0];
+    let y = face[i][1];
+    let z = face[i][2];
+
+    if (axis === 'x') {
+      newFace[i] = [x, Math.round(y * cos - z * sin), Math.round(y * sin + z * cos)];
+    } else if (axis === 'y') {
+      newFace[i] = [Math.round(x * cos + z * sin), y, Math.round(-x * sin + z * cos)];
+    } else if (axis === 'z') {
+      newFace[i] = [Math.round(x * cos - y * sin), Math.round(x * sin + y * cos), z];
+    }
+  }
+
+  return newFace;
+}
+
+//rotate each face with degree
+function rotateCube(size: number, degreePerMinute: number): any {
+  let newCube = initializeCube(size);
+  //let degreePerMinute = 6
+
+  const [degree_x, setDegree_x] = useState(0);
+
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setDegree_x(prevCount => (prevCount + 1) % 360 * degreePerMinute);
+  //   }, 1000); // Update every second
+
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  //for the testing purpose, I will rotate the cube with 90 degree
+  setDegree_x(90);
+
+  //rotate the cube with time
+  //rotate face1 with degree
+  newCube[0] = rotateFace(newCube[0], 'x', degree_x);
+
+  console.log(newCube);
+
+  return newCube;
+}
+
+
+
+//Generate a 3D matrix of size x size x size and put each side of the cube in the matrix
+function renderingCube(size: number): any {
+  //Canvas is twice the size of the square of cubes and has 6 layers
+  let canvas = Array(size*2).fill(null).map(() => 
+    Array(size*2).fill(null).map(() => 
+     Array(6).fill(null).map(() => 0)
+    )
+  );
+
+  console.log(canvas);
+
+  let newCanvas = Array(size*2).fill(null).map(() => 
+    Array(size*2).fill(null).map(() => ' '
+    )
+  );
+
+  let newCube = rotateCube(size, 6);
+
+  let face1 = newCube[0];
+
+  for (let i = 0; i < face1.length; i++) {
+
+    let xcoor = face1[i][0];
+    let ycoor = face1[i][1];
+    let zcoor = face1[i][2];
+
+    //put coordination in the canvas layer 1 (for face1)
+    //I will compare 6 faces with the coordination and pick the highest z value and get the face number
+    //each face number has unique ASCII character
+
+    
+    canvas[xcoor][ycoor][0] = zcoor; //face1
+    
+
+    //return face number that has the highest z value
+    let faceNumber = 0;
+    let highestZ = canvas[xcoor][ycoor][0];
+    for (let i = 1; i < 6; i++) {
+      if (canvas[xcoor][ycoor][i] > highestZ) {
+        highestZ = canvas[xcoor][ycoor][i];
+        faceNumber = i;
+      }
+    }
+
+    switch (faceNumber) {
+      case 0:
+        newCanvas[xcoor][ycoor] = '@'
+        break;
+    }
+
+  }
+
+  return newCanvas
+}
+
+//compare 6 faces with the coordination and pick the highest z value and get the face number
 function renderCanvas(size: number): string {
-  let canvas = calculateCube(size);
+  let newCanvas = renderingCube(size);
   let result = '';
 
   for (let x = 0; x < size; x++) {
     for (let y = 0; y < size; y++) {
-      result += canvas[x][y][0] + ' ';     
+      result += newCanvas[x][y] + ' ';     
     }
     result += '\n';
   }
@@ -106,12 +193,12 @@ function renderCanvas(size: number): string {
 
 function Canvas() {
   const size = 10; // Adjust the size as needed
-  const squareArt = renderCanvas(size);
+  const canvasArt = renderCanvas(size);
 
   return (
     <div style={{ lineHeight: '1.2em' }}>
       <pre>
-        {squareArt}
+        {canvasArt}
       </pre>
     </div>
   );
