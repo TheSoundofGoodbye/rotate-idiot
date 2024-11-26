@@ -10,7 +10,7 @@ type Cube = Face[]; // Cube is an array of 6 faces
 
 //initialize the face of the cube
 function initializeFace(size: number, faceIndex: number): Face {
-  let face: Face = [];
+  const face: Face = [];
   const halfSize = size / 2;
 
   for (let i = 0; i < size; i++) {
@@ -103,7 +103,7 @@ function renderCanvas(canvas: number[][][], size: number): string {
         continue;
       }
 
-      let faceIndex = canvas[i][j].indexOf(maxZ);
+      const faceIndex = canvas[i][j].indexOf(maxZ);
       
       switch (faceIndex) {
         case 0:
@@ -135,8 +135,8 @@ function renderCanvas(canvas: number[][][], size: number): string {
 
 function CubeComponent() {
   const size = 25; // Adjust the size as needed, prefer be an odd number
-  const [cube, setCube] = useState(initializeCube(size));
-  const [canvas, setCanvas] = useState(extractZCoordinates(cube, size));
+  const [cube] = useState(initializeCube(size));
+  const [canvas] = useState(extractZCoordinates(cube, size));
   const [canvasArt, setCanvasArt] = useState(renderCanvas(canvas, size));
   const [rotationX, setRotationX] = useState(0);
   const [rotationY, setRotationY] = useState(0);
