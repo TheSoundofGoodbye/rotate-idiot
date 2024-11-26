@@ -1,189 +1,138 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from "next/image";
+import Image from 'next/image';
 
-//initialzie the cube
-function initializeCube(size: number): any {
-  // face 1 is the front face and face1 has size * size elements with coordination (0,0,0) to (0,size-1,size-1)
-  let face1 = Array(size*size).fill(null).map(() => [0,0,0]);
-   
+// Define the types
+type Coordinate = [number, number, number];  // Coordination of each character (ASCII) in the cube
+type Face = Coordinate[]; // Face of the cube, which is an array of size * size coordinates
+type Cube = Face[]; // Cube is an array of 6 faces
+
+//initialize the face of the cube
+function initializeFace(size: number, faceIndex: number): Face {
+  let face: Face = [];
+  const halfSize = size / 2;
+
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
-      face1[i * 10 + j] = [0, i, j];
+      const x = i - halfSize + 0.5;
+      const y = j - halfSize + 0.5;
+      if (faceIndex === 0) {
+        face.push([x, y, -halfSize + 0.5]);
+      } else if (faceIndex === 1) {
+        face.push([x, y, halfSize + 0.5]);
+      } else if (faceIndex === 2) {
+        face.push([x, -halfSize + 0.5, y]);
+      } else if (faceIndex === 3) {
+        face.push([x, halfSize + 0.5, y]);
+      } else if (faceIndex === 4) {
+        face.push([-halfSize + 0.5, x, y]);
+      } else if (faceIndex === 5) {
+        face.push([halfSize + 0.5, x, y]);
+      }
     }
   }
-  
-  // // face 2 is the back face and face2 has size * size elements with coordination (size-1,0,0) to (size-1,size-1,size-1)
-  // let face2 = Array(size*size).fill(null).map(() =>  
-  //   Array(size).fill(null).map(() => [0,0,0])
-  // );
-  // for (let i = 0; i < size; i++) {
-  //   for (let j = 0; j < size; j++) {
-  //     face2[i][j] = [size-1, i, j];
-  //   }
-  // }
-  
-  // // face 3 is the left face and face3 has size * size elements with coordination (0,0,0) to (size-1,0,size-1)
-  // let face3 = Array(size*size).fill(null).map(() =>  
-  //   Array(size).fill(null).map(() => [0,0,0])
-  // );
-  // for (let i = 0; i < size; i++) {
-  //   for (let j = 0; j < size; j++) {
-  //     face3[i][j] = [i, 0, j];
-  //   }
-  // }
 
-  // // face 4 is the right face and face4 has size * size elements with coordination (0,size-1,0) to (size-1,size-1,size-1)
-  // let face4 = Array(size*size).fill(null).map(() =>  
-  //   Array(size).fill(null).map(() => [0,0,0])
-  // );
-  // for (let i = 0; i < size; i++) {
-  //   for (let j = 0; j < size; j++) {
-  //     face4[i][j] = [i, size-1, j];
-  //   }
-  // }
-
-  // // face 5 is the top face and face5 has size * size elements with coordination (0,0,0) to (size-1,size-1,0)
-  // let face5 = Array(size*size).fill(null).map(() =>  
-  //   Array(size).fill(null).map(() => [0,0,0])
-  // );
-  // for (let i = 0; i < size; i++) {
-  //   for (let j = 0; j < size; j++) {
-  //     face5[i][j] = [i, j, 0];
-  //   }
-  // }
-
-  // // face 6 is the bottom face and face6 has size * size elements with coordination (0,0,size-1) to (size-1,size-1,size-1)
-  // let face6 = Array(size*size).fill(null).map(() =>  
-  //   Array(size).fill(null).map(() => [0,0,0])
-  // );
-  // for (let i = 0; i < size; i++) {
-  //   for (let j = 0; j < size; j++) {
-  //     face6[i][j] = [i, j, size-1];
-  //   }
-  // }
-
-  const initialCube = [face1];
-  
-  return initialCube;
+  return face;
 }
 
-function rotateFace(face: any, axis: string, degree: number): any {
-  let newFace = face;
-  let radian = degree * Math.PI / 180;
-  let cos = Math.cos(radian);
-  let sin = Math.sin(radian);
+//initialize the cube
+function initializeCube(size: number): Cube {
+  const cube: Cube = [];
+  for (let i = 0; i < 6; i++) {
+    cube.push(initializeFace(size, i));
+  }
 
-  for (let i = 0; i < face.length; i++) {
-    let x = face[i][0];
-    let y = face[i][1];
-    let z = face[i][2];
+  return cube;
+}
 
+function rotateFace(face: Coordinate[], axis: string, degree: number): Coordinate[] {
+  const radian = degree * Math.PI / 180;
+  const cos = Math.cos(radian);
+  const sin = Math.sin(radian);
+  const newFace = face.map(([x, y, z]) => {
     if (axis === 'x') {
-      newFace[i] = [x, Math.round(y * cos - z * sin), Math.round(y * sin + z * cos)];
+      return [x, y * cos - z * sin, y * sin + z * cos];
     } else if (axis === 'y') {
-      newFace[i] = [Math.round(x * cos + z * sin), y, Math.round(-x * sin + z * cos)];
+      return [x * cos + z * sin, y, -x * sin + z * cos];
     } else if (axis === 'z') {
-      newFace[i] = [Math.round(x * cos - y * sin), Math.round(x * sin + y * cos), z];
+      return [x * cos - y * sin, x * sin + y * cos, z];
     }
-  }
-
-  return newFace;
+    return [x, y, z];
+  });
+  return newFace as Coordinate[]; //newFace has size * size of new coordinations
 }
 
-//rotate each face with degree
-function rotateCube(size: number, degreePerMinute: number): any {
-  let newCube = initializeCube(size);
-  //let degreePerMinute = 6
-
-  const [degree_x, setDegree_x] = useState(0);
-
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setDegree_x(prevCount => (prevCount + 1) % 360 * degreePerMinute);
-  //   }, 1000); // Update every second
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
-  //for the testing purpose, I will rotate the cube with 90 degree
-  setDegree_x(90);
-
-  //rotate the cube with time
-  //rotate face1 with degree
-  newCube[0] = rotateFace(newCube[0], 'x', degree_x);
-
-  console.log(newCube);
-
+function rotateCube(cube: Cube, axis: string, degree: number): Cube {
+  const newCube: Cube = cube.map(face => rotateFace(face, axis, degree));
   return newCube;
 }
 
-
-
-//Generate a 3D matrix of size x size x size and put each side of the cube in the matrix
-function renderingCube(size: number): any {
-  //Canvas is twice the size of the square of cubes and has 6 layers
-  let canvas = Array(size*2).fill(null).map(() => 
-    Array(size*2).fill(null).map(() => 
-     Array(6).fill(null).map(() => 0)
+function extractZCoordinates(cube: Cube, size: number): number[][][] {
+  // Initialize, canvas should be 3 times larger than cube
+  const canvas = Array(size * 3).fill(null).map(() =>
+    Array(size * 3).fill(null).map(() =>
+      Array(6).fill(size * 2) // Initialize with the lowest z-coordinate (farthest from the viewer)
     )
   );
 
-  console.log(canvas);
-
-  let newCanvas = Array(size*2).fill(null).map(() => 
-    Array(size*2).fill(null).map(() => ' '
-    )
-  );
-
-  let newCube = rotateCube(size, 6);
-
-  let face1 = newCube[0];
-
-  for (let i = 0; i < face1.length; i++) {
-
-    let xcoor = face1[i][0];
-    let ycoor = face1[i][1];
-    let zcoor = face1[i][2];
-
-    //put coordination in the canvas layer 1 (for face1)
-    //I will compare 6 faces with the coordination and pick the highest z value and get the face number
-    //each face number has unique ASCII character
-
-    
-    canvas[xcoor][ycoor][0] = zcoor; //face1
-    
-
-    //return face number that has the highest z value
-    let faceNumber = 0;
-    let highestZ = canvas[xcoor][ycoor][0];
-    for (let i = 1; i < 6; i++) {
-      if (canvas[xcoor][ycoor][i] > highestZ) {
-        highestZ = canvas[xcoor][ycoor][i];
-        faceNumber = i;
-      }
-    }
-
-    switch (faceNumber) {
-      case 0:
-        newCanvas[xcoor][ycoor] = '@'
-        break;
-    }
-
+  // Extract z-axis coordinates for each face
+  for (let i = 0; i < size * size; i++) {
+    canvas[size + Math.round(cube[0][i][0])][size + Math.round(cube[0][i][1])][0] = cube[0][i][2]; // Front face's z-coordination
+    canvas[size + Math.round(cube[1][i][0])][size + Math.round(cube[1][i][1])][1] = cube[1][i][2]; // Back face's z-coordination
+    canvas[size + Math.round(cube[2][i][0])][size + Math.round(cube[2][i][1])][2] = cube[2][i][2]; // Top face's z-coordination
+    canvas[size + Math.round(cube[3][i][0])][size + Math.round(cube[3][i][1])][3] = cube[3][i][2]; // Bottom face's z-coordination
+    canvas[size + Math.round(cube[4][i][0])][size + Math.round(cube[4][i][1])][4] = cube[4][i][2]; // Left face's z-coordination
+    canvas[size + Math.round(cube[5][i][0])][size + Math.round(cube[5][i][1])][5] = cube[5][i][2]; // Right face's z-coordination
   }
 
-  return newCanvas
+  return canvas;
 }
 
-//compare 6 faces with the coordination and pick the highest z value and get the face number
-function renderCanvas(size: number): string {
-  let newCanvas = renderingCube(size);
-  let result = '';
+function renderCanvas(canvas: number[][][], size: number): string {
+  //canvas2D should be 3 times larger than canvas to make the cube look more realistic
+  const canvas2D = Array(size*3).fill(null).map(() =>
+    Array(size*3).fill(null).map(() => ' '
+    )
+  );
 
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      result += newCanvas[x][y] + ' ';     
+  let faceIndex = 0;
+
+  let result = '';
+  // only highest z-coordinate is visible
+  for (let i = 0; i < canvas.length; i++) {
+    for (let j = 0; j < canvas[i].length; j++) {
+      //which face has the highest z-coordinate and return face number
+      Math.max(...canvas[i][j]);
+
+      if(Math.min(...canvas[i][j]) === size * 2) {
+        canvas2D[i][j] = '  ';
+        result += canvas2D[i][j];
+        continue;
+      }
+
+      faceIndex = canvas[i][j].indexOf(Math.max(...canvas[i][j]));
+      switch (faceIndex) {
+        case 0:
+          canvas2D[i][j] = '# ';
+          break;
+        case 1:
+          canvas2D[i][j] = '@ ';
+          break;
+        case 2:
+          canvas2D[i][j] = '$ ';
+          break;
+        case 3:
+          canvas2D[i][j] = '% ';
+          break;
+        case 4:
+          canvas2D[i][j] = '& ';
+          break;
+        case 5:
+          canvas2D[i][j] = '* ';
+          break;
+      }
+      result += canvas2D[i][j];
     }
     result += '\n';
   }
@@ -191,12 +140,29 @@ function renderCanvas(size: number): string {
   return result;
 }
 
-function Canvas() {
-  const size = 10; // Adjust the size as needed
-  const canvasArt = renderCanvas(size);
+function CubeComponent() {
+  const size = 15; // Adjust the size as needed, shold be odd number
+  const [cube, setCube] = useState(initializeCube(size));
+  const [canvas, setCanvas] = useState(extractZCoordinates(cube, size));
+  const [canvasArt, setCanvasArt] = useState(renderCanvas(canvas, size));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCube(prevCube => {
+        const newCubeX = rotateCube(prevCube, 'x', 5); // Rotate the cube by 90 degrees on the x-axis
+        const newCubeY = rotateCube(newCubeX, 'y', 5); // Rotate the cube by 90 degrees on the y-axis
+        const newCubeZ = rotateCube(newCubeY, 'z', 5); // Rotate the cube by 90 degrees on the z-axis
+        const newCanvas = extractZCoordinates(newCubeZ, size);
+        setCanvasArt(renderCanvas(newCanvas, size));
+        return newCubeZ;
+      });
+    }, 100); // Adjust the update speed as needed
+
+    return () => clearInterval(interval);
+  }, [size]);
 
   return (
-    <div style={{ lineHeight: '1.2em' }}>
+    <div style={{ lineHeight: '1.2em', whiteSpace: 'pre' }}>
       <pre>
         {canvasArt}
       </pre>
@@ -204,13 +170,12 @@ function Canvas() {
   );
 }
 
-
 export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
 
-        <Canvas/>
+        <CubeComponent />
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
@@ -245,44 +210,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
+          Learn Next.js
         </a>
       </footer>
     </div>
