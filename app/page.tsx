@@ -69,10 +69,9 @@ function rotateCube(cube: Cube, axis: string, degree: number): Cube {
 }
 
 function extractZCoordinates(cube: Cube, size: number): number[][][] {
-  // Initialize, canvas should be 3 times larger than cube
-  const canvas = Array(size * 3).fill(null).map(() =>
-    Array(size * 3).fill(null).map(() =>
-      Array(6).fill(size * 2) // Initialize with the lowest z-coordinate (farthest from the viewer)
+  const canvas = Array(size * 2).fill(null).map(() =>
+    Array(size * 2).fill(null).map(() =>
+      Array(6).fill(-Infinity)
     )
   );
 
@@ -90,46 +89,40 @@ function extractZCoordinates(cube: Cube, size: number): number[][][] {
 }
 
 function renderCanvas(canvas: number[][][], size: number): string {
-  //canvas2D should be 3 times larger than canvas to make the cube look more realistic
-  const canvas2D = Array(size*3).fill(null).map(() =>
-    Array(size*3).fill(null).map(() => ' '
-    )
+  const canvas2D = Array(size * 2).fill(null).map(() =>
+    Array(size * 2).fill(' ')
   );
 
-  let faceIndex = 0;
-
   let result = '';
-  // only highest z-coordinate is visible
+  // Only the highest z-coordinate is visible
   for (let i = 0; i < canvas.length; i++) {
     for (let j = 0; j < canvas[i].length; j++) {
-      //which face has the highest z-coordinate and return face number
-      Math.max(...canvas[i][j]);
-
-      if(Math.min(...canvas[i][j]) === size * 2) {
-        canvas2D[i][j] = '  ';
-        result += canvas2D[i][j];
+      const maxZ = Math.max(...canvas[i][j]);
+      if (maxZ === -Infinity) {
+        result += ' ';
         continue;
       }
 
-      faceIndex = canvas[i][j].indexOf(Math.max(...canvas[i][j]));
+      let faceIndex = canvas[i][j].indexOf(maxZ);
+      
       switch (faceIndex) {
         case 0:
-          canvas2D[i][j] = '# ';
+          canvas2D[i][j] = '-';
           break;
         case 1:
-          canvas2D[i][j] = '@ ';
+          canvas2D[i][j] = '+';
           break;
         case 2:
-          canvas2D[i][j] = '$ ';
+          canvas2D[i][j] = '=';
           break;
         case 3:
-          canvas2D[i][j] = '% ';
+          canvas2D[i][j] = '~';
           break;
         case 4:
-          canvas2D[i][j] = '& ';
+          canvas2D[i][j] = '*';
           break;
         case 5:
-          canvas2D[i][j] = '* ';
+          canvas2D[i][j] = '#';
           break;
       }
       result += canvas2D[i][j];
@@ -141,28 +134,77 @@ function renderCanvas(canvas: number[][][], size: number): string {
 }
 
 function CubeComponent() {
-  const size = 15; // Adjust the size as needed, shold be odd number
+  const size = 25; // Adjust the size as needed, prefer be an odd number
   const [cube, setCube] = useState(initializeCube(size));
   const [canvas, setCanvas] = useState(extractZCoordinates(cube, size));
   const [canvasArt, setCanvasArt] = useState(renderCanvas(canvas, size));
+  const [rotationX, setRotationX] = useState(0);
+  const [rotationY, setRotationY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastMouseX, setLastMouseX] = useState(0);
+  const [lastMouseY, setLastMouseY] = useState(0);
+  const [velocityX, setVelocityX] = useState(0);
+  const [velocityY, setVelocityY] = useState(0);
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    setIsDragging(true);
+    setLastMouseX(event.clientX);
+    setLastMouseY(event.clientY);
+  };
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging) return;
+
+    const deltaX = event.clientX - lastMouseX;
+    const deltaY = event.clientY - lastMouseY;
+
+    setRotationX(prevRotationX => prevRotationX + deltaX * 0.3);
+    setRotationY(prevRotationY => prevRotationY + deltaY * 0.3);
+
+    setVelocityX(deltaY * 0.5);
+    setVelocityY(deltaX * 0.5);
+
+    setLastMouseX(event.clientX);
+    setLastMouseY(event.clientY);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCube(prevCube => {
-        const newCubeX = rotateCube(prevCube, 'x', 5); // Rotate the cube by 90 degrees on the x-axis
-        const newCubeY = rotateCube(newCubeX, 'y', 5); // Rotate the cube by 90 degrees on the y-axis
-        const newCubeZ = rotateCube(newCubeY, 'z', 5); // Rotate the cube by 90 degrees on the z-axis
-        const newCanvas = extractZCoordinates(newCubeZ, size);
-        setCanvasArt(renderCanvas(newCanvas, size));
-        return newCubeZ;
-      });
-    }, 100); // Adjust the update speed as needed
+    const newCubeX = rotateCube(cube, 'x', -rotationX);
+    const newCubeY = rotateCube(newCubeX, 'y', rotationY);
+    const newCanvas = extractZCoordinates(newCubeY, size);
+    setCanvasArt(renderCanvas(newCanvas, size));
+  }, [rotationX, rotationY, cube, size]);
 
-    return () => clearInterval(interval);
-  }, [size]);
+  useEffect(() => {
+    if (!isDragging) {
+      const interval = setInterval(() => {
+        setRotationX(prevRotationX => prevRotationX + velocityX);
+        setRotationY(prevRotationY => prevRotationY + velocityY);
+
+        setVelocityX(prevVelocityX => prevVelocityX * 0.95); // Apply deceleration
+        setVelocityY(prevVelocityY => prevVelocityY * 0.95); // Apply deceleration
+
+        if (Math.abs(velocityX) < 0.01 && Math.abs(velocityY) < 0.01) {
+          clearInterval(interval);
+        }
+      }, 16); // Approximately 60 frames per second
+
+      return () => clearInterval(interval);
+    }
+  }, [isDragging, velocityX, velocityY]);
 
   return (
-    <div style={{ lineHeight: '1.2em', whiteSpace: 'pre' }}>
+    <div className="nodrag"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{ lineHeight: '1em', letterSpacing: '0.2em', whiteSpace: 'pre', cursor: 'pointer' }}
+    >
       <pre>
         {canvasArt}
       </pre>
