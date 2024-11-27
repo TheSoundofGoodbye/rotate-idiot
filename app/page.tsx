@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 // Define the types
 type Coordinate = [number, number, number];  // Coordination of each character (ASCII) in the cube
@@ -145,7 +144,6 @@ function CubeComponent() {
   const [lastMouseY, setLastMouseY] = useState(0);
   const [velocityX, setVelocityX] = useState(0);
   const [velocityY, setVelocityY] = useState(0);
-  const [error, setError] = useState<string | null>(null);
 
   const handleMouseDown = (event: React.MouseEvent) => {
     setIsDragging(true);
@@ -158,12 +156,10 @@ function CubeComponent() {
 
     const deltaX = event.clientX - lastMouseX;
     const deltaY = event.clientY - lastMouseY;
-    try {
-      setRotationX(prevRotationX => prevRotationX + deltaX * 0.3);
-      setRotationY(prevRotationY => prevRotationY + deltaY * 0.3);
-    } catch (err) {
-     setError("'Don't spin to fast. You might get dizzy'");
-   }
+
+    setRotationX(prevRotationX => prevRotationX + deltaX * 0.3);
+    setRotationY(prevRotationY => prevRotationY + deltaY * 0.3);
+
     setVelocityX(deltaY * 0.5);
     setVelocityY(deltaX * 0.5);
 
@@ -176,12 +172,10 @@ function CubeComponent() {
   };
 
   useEffect(() => {
-
     const newCubeX = rotateCube(cube, 'x', -rotationX);
     const newCubeY = rotateCube(newCubeX, 'y', rotationY);
     const newCanvas = extractZCoordinates(newCubeY, size);
     setCanvasArt(renderCanvas(newCanvas, size));
-
   }, [rotationX, rotationY, cube, size]);
 
   useEffect(() => {
